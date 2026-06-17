@@ -1,10 +1,10 @@
-#  STM32 Agentic AI Assistant
+# STM32 Agentic AI Assistant
 
 一個基於 **RAG + Agentic Loop + Tool Use** 的 STM32 嵌入式系統 AI 助手，能夠自動查詢技術文件、解釋暫存器、生成 HAL C 程式碼。
 
 ---
 
-##  專案簡介
+## 專案簡介
 
 本專案是一個 **Agentic AI** 系統，核心概念是讓 LLM 自主決定要呼叫哪些工具、呼叫幾次，而不是由程式硬編碼執行順序。
 
@@ -16,37 +16,33 @@
 
 ---
 
-##  系統架構
+## 系統架構
 
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff', 'primaryBorderColor': '#333333', 'primaryTextColor': '#111111', 'lineColor': '#555555', 'secondaryColor': '#eeeeee', 'tertiaryColor': '#dddddd', 'clusterBkg': '#f5f5f5', 'clusterBorder': '#aaaaaa', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'monospace'}}}%%
-flowchart TD
-    User[使用者輸入問題]
+本系統採用 RAG（Retrieval Augmented Generation）、Tool Use 與 Agentic AI 架構。
+使用者以自然語言提出問題後，Agent 會分析需求並自主決定是否呼叫工具。當需要查詢技術文件時，系統會從 STM32 PDF 建立的向量資料庫中搜尋相關內容；若涉及暫存器設定或程式設計，則分別呼叫對應工具進行解析與程式碼生成。最後，Agent 會整合所有工具回傳的結果，產生完整且具參考依據的回答。
 
-    subgraph Loop[Agentic Loop  最多 6 輪]
-        LLM[LLM 推理\nLLaMA 3.3 70B] --> Decision{需要呼叫工具?}
-    end
+**工作流程**
 
-    subgraph Tools[Tool Use]
-        T1[search_docs\n向量搜尋文件]
-        T2[generate_code\n生成 HAL C 程式碼]
-        T3[explain_register\n解析暫存器]
-    end
-
-    subgraph RAG[RAG 知識庫]
-        PDF[STM32 PDF 文件] --> Embed[Embedding\nnv-embedqa-e5-v5] --> FAISS[FAISS\nVector Store]
-    end
-
-    User --> LLM
-    Decision -- Yes --> Tools
-    Tools -- 工具結果回傳 --> LLM
-    T1 <--> FAISS
-    Decision -- No --> Answer[最終回答 + 推理步驟 + 來源文件]
+```
+使用者問題
+      ↓
+ Agent 分析需求（LLaMA 3.3 70B）
+      ↓
+ 自主選擇工具
+      ├── search_docs      → 從 FAISS 向量庫搜尋 STM32 文件
+      ├── explain_register → 解析暫存器 bit-field
+      └── generate_code    → 生成 STM32 HAL C 程式碼
+      ↓
+ 將工具結果回傳給 Agent 繼續推理
+      ↓
+ 重複以上步驟（最多 6 輪）
+      ↓
+ 回傳最終回答 + 推理步驟 + 來源文件
 ```
 
 ---
 
-##  核心概念
+## 核心概念
 
 ### 1. RAG（Retrieval Augmented Generation）
 - 將 STM32 PDF 文件切割成 chunks 並向量化
@@ -65,7 +61,7 @@ flowchart TD
 
 ---
 
-##  技術棧
+## 技術棧
 
 | 類別 | 技術 |
 |------|------|
@@ -78,7 +74,7 @@ flowchart TD
 
 ---
 
-##  專案結構
+## 專案結構
 
 ```
 stm32-ai-assistant/
@@ -97,7 +93,7 @@ stm32-ai-assistant/
 
 ---
 
-##  安裝與執行
+## 安裝與執行
 
 ### 1. 安裝依賴
 
@@ -141,30 +137,30 @@ streamlit run app.py
 
 ---
 
-##  使用範例
+## 使用範例
 
 **問題：** `How do I configure UART2 at 115200 baud on STM32F103?`
 
 **Agent 執行流程：**
 
 ```
- 開始處理：目標晶片 STM32F103
- 第 1 輪推理
-   LLM 推理：決定呼叫 search_docs
-   呼叫工具：search_docs({"query": "UART2 baud rate configuration STM32F103"})
-   搜尋結果：找到 5 筆相關文件片段
- 第 2 輪推理
-   LLM 推理：決定呼叫 generate_code
-   呼叫工具：generate_code({"description": "Configure UART2 at 115200 baud"})
-   生成程式碼完成
- 第 3 輪推理
-   LLM 決定直接回答
- 完成：共執行 3 輪，引用 5 筆來源文件
+開始處理：目標晶片 STM32F103
+第 1 輪推理
+  LLM 推理：決定呼叫 search_docs
+  呼叫工具：search_docs({"query": "UART2 baud rate configuration STM32F103"})
+  搜尋結果：找到 5 筆相關文件片段
+第 2 輪推理
+  LLM 推理：決定呼叫 generate_code
+  呼叫工具：generate_code({"description": "Configure UART2 at 115200 baud"})
+  生成程式碼完成
+第 3 輪推理
+  LLM 決定直接回答
+完成：共執行 3 輪，引用 5 筆來源文件
 ```
 
 ---
 
-##  支援的 STM32 型號
+## 支援的 STM32 型號
 
 - STM32F103
 - STM32F401 / F407
@@ -174,7 +170,7 @@ streamlit run app.py
 
 ---
 
-##  未來改進方向
+## 未來改進方向
 
 - [ ] 新增更多工具（`list_peripherals`、`check_clock_config`）
 - [ ] 支援多份 PDF 來源標記
@@ -183,6 +179,6 @@ streamlit run app.py
 
 ---
 
-##  作者
+## 作者
 
 專案為嵌入式系統 AI 助手課程作業，展示 Agentic AI 在工程領域的實際應用。
