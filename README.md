@@ -18,36 +18,30 @@
 
 ##  系統架構
 
-```
-使用者問題
-    │
-    ▼
-┌─────────────────────────────────────┐
-│           Agentic Loop              │
-│                                     │
-│  LLM 推理 ──► 決定呼叫工具          │
-│      ▲              │               │
-│      │              ▼               │
-│      │    ┌─────────────────┐       │
-│      │    │   Tool Use      │       │
-│      │    │  ┌───────────┐  │       │
-│      │    │  │search_docs│  │       │  ◄── FAISS Vector DB
-│      │    │  └───────────┘  │       │      (STM32 PDF 文件)
-│      │    │  ┌────────────┐ │       │
-│      │    │  │gen_code    │ │       │
-│      │    │  └────────────┘ │       │
-│      │    │  ┌──────────────┐│      │
-│      │    │  │explain_reg   ││      │
-│      │    │  └──────────────┘│      │
-│      │    └─────────────────┘       │
-│      │              │               │
-│      └──── 工具結果 ◄┘               │
-│                                     │
-│    （重複直到 LLM 認為可以回答）      │
-└─────────────────────────────────────┘
-    │
-    ▼
-最終回答 + 推理步驟 + 來源文件
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff', 'primaryBorderColor': '#333333', 'primaryTextColor': '#111111', 'lineColor': '#555555', 'secondaryColor': '#eeeeee', 'tertiaryColor': '#dddddd', 'clusterBkg': '#f5f5f5', 'clusterBorder': '#aaaaaa', 'edgeLabelBackground': '#ffffff', 'fontFamily': 'monospace'}}}%%
+flowchart TD
+    User[使用者輸入問題]
+
+    subgraph Loop[Agentic Loop  最多 6 輪]
+        LLM[LLM 推理\nLLaMA 3.3 70B] --> Decision{需要呼叫工具?}
+    end
+
+    subgraph Tools[Tool Use]
+        T1[search_docs\n向量搜尋文件]
+        T2[generate_code\n生成 HAL C 程式碼]
+        T3[explain_register\n解析暫存器]
+    end
+
+    subgraph RAG[RAG 知識庫]
+        PDF[STM32 PDF 文件] --> Embed[Embedding\nnv-embedqa-e5-v5] --> FAISS[FAISS\nVector Store]
+    end
+
+    User --> LLM
+    Decision -- Yes --> Tools
+    Tools -- 工具結果回傳 --> LLM
+    T1 <--> FAISS
+    Decision -- No --> Answer[最終回答 + 推理步驟 + 來源文件]
 ```
 
 ---
@@ -71,7 +65,7 @@
 
 ---
 
-## 🛠️ 技術棧
+##  技術棧
 
 | 類別 | 技術 |
 |------|------|
@@ -147,11 +141,12 @@ streamlit run app.py
 
 ---
 
-## 💬 使用範例
+##  使用範例
 
 **問題：** `How do I configure UART2 at 115200 baud on STM32F103?`
 
 **Agent 執行流程：**
+
 ```
  開始處理：目標晶片 STM32F103
  第 1 輪推理
@@ -176,14 +171,6 @@ streamlit run app.py
 - STM32L4
 - STM32H7
 - STM32F0 / F3
-
----
-
-##  .env.example
-
-```env
-NVIDIA_API_KEY=your_nvidia_api_key_here
-```
 
 ---
 
